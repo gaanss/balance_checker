@@ -7,7 +7,7 @@ import os
 import yaml
 from typing import Optional
 
-# Supported networks with their chain IDs
+# Supported networks with their chain IDs and native currencies
 SUPPORTED_NETWORKS = {
     1: "Ethereum Mainnet",
     11155111: "Sepolia Testnet",
@@ -78,8 +78,79 @@ SUPPORTED_NETWORKS = {
     5611: "opBNB Testnet"
 }
 
+# Native currencies for each network
+NATIVE_CURRENCIES = {
+    1: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    11155111: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    17000: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    560048: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    2741: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    11124: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    33111: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    33139: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    42170: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    42161: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    421614: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    43114: {"symbol": "AVAX", "name": "Avalanche", "decimals": 18},
+    43113: {"symbol": "AVAX", "name": "Avalanche", "decimals": 18},
+    8453: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    84532: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    80094: {"symbol": "BERA", "name": "Berachain", "decimals": 18},
+    80069: {"symbol": "BERA", "name": "Berachain", "decimals": 18},
+    199: {"symbol": "BTT", "name": "BitTorrent", "decimals": 18},
+    1029: {"symbol": "BTT", "name": "BitTorrent", "decimals": 18},
+    81457: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    168587773: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    56: {"symbol": "BNB", "name": "BNB", "decimals": 18},
+    97: {"symbol": "BNB", "name": "BNB", "decimals": 18},
+    44787: {"symbol": "CELO", "name": "Celo", "decimals": 18},
+    42220: {"symbol": "CELO", "name": "Celo", "decimals": 18},
+    25: {"symbol": "CRO", "name": "Cronos", "decimals": 18},
+    252: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    2522: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    100: {"symbol": "XDAI", "name": "Gnosis", "decimals": 18},
+    999: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    59144: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    59141: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    5000: {"symbol": "MNT", "name": "Mantle", "decimals": 18},
+    5003: {"symbol": "MNT", "name": "Mantle", "decimals": 18},
+    43521: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    1287: {"symbol": "MOVR", "name": "Moonriver", "decimals": 18},
+    10143: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    1284: {"symbol": "GLMR", "name": "Moonbeam", "decimals": 18},
+    1285: {"symbol": "MOVR", "name": "Moonriver", "decimals": 18},
+    10: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    11155420: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    137: {"symbol": "MATIC", "name": "Polygon", "decimals": 18},
+    80002: {"symbol": "MATIC", "name": "Polygon", "decimals": 18},
+    747474: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    737373: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    1329: {"symbol": "SEI", "name": "Sei", "decimals": 18},
+    1328: {"symbol": "SEI", "name": "Sei", "decimals": 18},
+    534352: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    534351: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    14601: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    146: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    50104: {"symbol": "SOPH", "name": "Sophon", "decimals": 18},
+    531050104: {"symbol": "SOPH", "name": "Sophon", "decimals": 18},
+    1923: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    1924: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    167000: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    167012: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    130: {"symbol": "UNI", "name": "Unichain", "decimals": 18},
+    1301: {"symbol": "UNI", "name": "Unichain", "decimals": 18},
+    480: {"symbol": "WLD", "name": "World", "decimals": 18},
+    4801: {"symbol": "WLD", "name": "World", "decimals": 18},
+    51: {"symbol": "XDC", "name": "XDC", "decimals": 18},
+    50: {"symbol": "XDC", "name": "XDC", "decimals": 18},
+    324: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    300: {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+    204: {"symbol": "BNB", "name": "BNB", "decimals": 18},
+    5611: {"symbol": "BNB", "name": "BNB", "decimals": 18}
+}
+
 # Default networks to check (from user's request)
-DEFAULT_NETWORKS = [42161, 43114, 56, 10, 137, 204]
+DEFAULT_NETWORKS = [8453, 56, 5611]
 
 # Etherscan API configuration
 ETHERSCAN_API_BASE_URL = "https://api.etherscan.io/v2/api"

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from decimal import Decimal, getcontext
 import time
 from etherscan_client import EtherscanClient
-from config import SUPPORTED_NETWORKS, DEFAULT_NETWORKS, DEFAULT_ADDRESS
+from config import SUPPORTED_NETWORKS, DEFAULT_NETWORKS, DEFAULT_ADDRESS, NATIVE_CURRENCIES
 from wallet_reader import WalletReader
 
 # Set precision for decimal calculations
@@ -27,47 +27,53 @@ class BalanceChecker:
         self.client = EtherscanClient(api_key)
         self.wallet_reader = WalletReader()
     
-    def wei_to_ether(self, wei_amount: str) -> Decimal:
+    def wei_to_native(self, wei_amount: str, chain_id: int) -> Decimal:
         """
-        Convert Wei to Ether.
+        Convert Wei to native currency for the given chain.
         
         Args:
             wei_amount: Amount in Wei as string
+            chain_id: Chain ID to determine native currency
             
         Returns:
-            Amount in Ether as Decimal
+            Amount in native currency as Decimal
         """
         wei = Decimal(wei_amount)
-        ether = wei / Decimal(10**18)
-        return ether
+        currency_info = NATIVE_CURRENCIES.get(chain_id, {"decimals": 18})
+        decimals = currency_info["decimals"]
+        native_amount = wei / Decimal(10**decimals)
+        return native_amount
     
-    def format_balance(self, wei_amount: str, decimals: int = 6) -> str:
+    def format_balance(self, wei_amount: str, chain_id: int, decimals: int = 6) -> str:
         """
-        Format balance for display.
+        Format balance for display with correct native currency.
         
         Args:
             wei_amount: Amount in Wei as string
+            chain_id: Chain ID to determine native currency
             decimals: Number of decimal places to show
             
         Returns:
-            Formatted balance string
+            Formatted balance string with currency symbol
         """
         if wei_amount is None:
             return "N/A"
         
-        ether = self.wei_to_ether(wei_amount)
+        native_amount = self.wei_to_native(wei_amount, chain_id)
+        currency_info = NATIVE_CURRENCIES.get(chain_id, {"symbol": "ETH"})
+        symbol = currency_info["symbol"]
         
-        if ether == 0:
-            return "0.000000"
+        if native_amount == 0:
+            return f"0.000000 {symbol}"
         
         # Format with specified decimal places
-        formatted = f"{ether:.{decimals}f}"
+        formatted = f"{native_amount:.{decimals}f}"
         
         # Remove trailing zeros
         if '.' in formatted:
             formatted = formatted.rstrip('0').rstrip('.')
         
-        return formatted
+        return f"{formatted} {symbol}"
     
     def check_balance(self, address: str, chain_id: int) -> Dict:
         """
@@ -90,7 +96,9 @@ class BalanceChecker:
             'address': address,
             'success': success,
             'balance_wei': balance_wei,
-            'balance_ether': self.format_balance(balance_wei) if success else None,
+            'balance_native': self.format_balance(balance_wei, chain_id) if success else None,
+            'balance_decimal': self.wei_to_native(balance_wei, chain_id) if success else Decimal('0'),
+            'currency_symbol': NATIVE_CURRENCIES.get(chain_id, {"symbol": "ETH"})["symbol"],
             'error': error
         }
         
@@ -147,7 +155,7 @@ class BalanceChecker:
         successful_checks = 0
         
         # Print header
-        print(f"{'🌐 Network':<35} {'💰 Balance (ETH)':<20} {'📊 Status':<15}")
+        print(f"{'🌐 Network':<35} {'💰 Balance':<25} {'📊 Status':<15}")
         print("-" * 90)
         
         # Print results
@@ -155,20 +163,20 @@ class BalanceChecker:
             network = result['network_name']
             
             if result['success']:
-                balance = result['balance_ether']
+                balance = result['balance_native']
                 status = "✅ Success"
                 successful_checks += 1
                 
-                # Add to network totals
+                # Add to network totals (convert to ETH equivalent for total)
                 if network not in network_totals:
                     network_totals[network] = Decimal('0')
-                if balance and Decimal(balance) > 0:
-                    network_totals[network] += Decimal(balance)
+                if result['balance_decimal'] > 0:
+                    network_totals[network] += result['balance_decimal']
             else:
                 balance = "❌ Error"
                 status = f"❌ {result['error']}"
             
-            print(f"{network:<35} {balance:<20} {status:<15}")
+            print(f"{network:<35} {balance:<25} {status:<15}")
         
         print("-" * 90)
         
@@ -176,13 +184,24 @@ class BalanceChecker:
         if network_totals:
             print("\n📈 NETWORK TOTALS:")
             for network, total in sorted(network_totals.items()):
-                print(f"  {network:<35} {total:.6f} ETH")
+                # Get currency symbol for this network
+                network_chain_id = None
+                for chain_id, name in SUPPORTED_NETWORKS.items():
+                    if name == network:
+                        network_chain_id = chain_id
+                        break
+                
+                if network_chain_id:
+                    currency_symbol = NATIVE_CURRENCIES.get(network_chain_id, {"symbol": "ETH"})["symbol"]
+                    print(f"  {network:<35} {total:.6f} {currency_symbol}")
+                else:
+                    print(f"  {network:<35} {total:.6f} ETH")
         
         # Overall summary
         total_balance = sum(network_totals.values())
         print(f"\n📊 SUMMARY:")
         print(f"  ✅ Successful checks: {successful_checks}/{len(results)}")
-        print(f"  💰 Total balance: {total_balance:.6f} ETH")
+        print(f"  💰 Total balance: {total_balance:.6f} (mixed currencies)")
         print("="*90)
     
     def check_multiple_wallets(self, addresses: List[str], chain_ids: Optional[List[int]] = None) -> Dict[str, List[Dict]]:
