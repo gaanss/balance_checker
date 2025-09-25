@@ -1,0 +1,4 @@
+# Balance Checker Settings
+# Etherscan API configuration
+etherscan:
+  api_key: "API_KEY"
